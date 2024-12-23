@@ -22,6 +22,8 @@
 
 #include <grpc++/grpc++.h>
 
+#include "cyber/cyber.h"
+
 #include "openbot_bridge/sensor_msgs/sensor_image.pb.h"
 #include "openbot_bridge/service_msgs/sensor_service.pb.h"
 #include "openbot_bridge/service_msgs/sensor_service.grpc.pb.h"
@@ -46,6 +48,8 @@ public:
 
     bool InitFlag() { return init_flag_; }
 
+    virtual void StartListen();
+
     /**
      * @brief function that send car status msg through grpc
      * @param input car_status type msg shared ptr
@@ -53,6 +57,7 @@ public:
     void SendMsgToGrpc(const std::shared_ptr<::openbot_bridge::sensor_msgs::Image>& msg);
 
 private:
+    std::unique_ptr<::apollo::cyber::Node> node_ = nullptr;
     //  grpc service stub
     std::unique_ptr<::openbot_bridge::service_msgs::SensorService::Stub> stub_;
     u_int64_t tv_nsec_;

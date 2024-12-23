@@ -16,7 +16,7 @@ set(openbot_bridge_LIBRARY_DIR ${install_dir}/lib)
 ExternalProject_Add(
     bridge_proto
     GIT_REPOSITORY https://github.com/AibotBeginer/openbot_bridge.git
-    GIT_TAG develop
+    GIT_TAG grpc
     PREFIX ${CMAKE_CURRENT_BINARY_DIR}/third/openbot_bridge
     CMAKE_ARGS -DCMAKE_INSTALL_PREFIX:PATH=${install_dir} -DBUILD_SHARED_LIBS=ON
 )

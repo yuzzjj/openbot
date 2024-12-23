@@ -31,11 +31,19 @@ using ::grpc::ClientContext;
 using ::grpc::Status;
 
 GrpcClientImpl::GrpcClientImpl(std::shared_ptr<Channel> channel)
-    : stub_(::openbot_bridge::service_msgs::SensorService::NewStub(channel)) 
+    : node_(::apollo::cyber::CreateNode("grpc_client")),
+      stub_(::openbot_bridge::service_msgs::SensorService::NewStub(channel)) 
 {
+  CHECK(!!node_);
   LOG(INFO) << "GrpcClientImpl initial success";
   tv_nsec_ = (1000000000 / 10 / 2);
   init_flag_ = true;
+}
+
+void GrpcClientImpl::StartListen() {
+         LOG(INFO) << "===start listener===";
+         node_->CreateReader<::openbot_bridge::sensor_msgs::Image>("grpc_channel",
+    			  std::bind(&GrpcClientImpl::SendMsgToGrpc, this, std::placeholders::_1));
 }
 
 void GrpcClientImpl::SendMsgToGrpc(const std::shared_ptr<::openbot_bridge::sensor_msgs::Image>& msg) 

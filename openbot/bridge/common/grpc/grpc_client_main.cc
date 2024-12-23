@@ -19,7 +19,13 @@
 #include "openbot/common/utils/logging.hpp"
 #include "openbot/common/utils/version.hpp"
 
-#include "openbot/bridge/common/grpc/grpc_client.hpp"
+//#include "openbot/bridge/common/grpc/grpc_client.hpp"
+#include "openbot/bridge/common/grpc/grpc_common_client.hpp"
+
+#include <grpc++/grpc++.h>
+#include "openbot_bridge/sensor_msgs/sensor_image.pb.h"
+#include "openbot_bridge/service_msgs/sensor_service.pb.h"
+#include "openbot_bridge/service_msgs/sensor_service.grpc.pb.h"
 
 #include "absl/strings/str_format.h"
 
@@ -31,8 +37,8 @@
 DEFINE_string(grpc_client_host, "localhost", "Server host for the service");
 DEFINE_int32(grpc_client_port, 5005, "Server port for the service");
 
-using ::openbot::bridge::grpc::GrpcClientImpl;
-
+//using ::openbot::bridge::grpc::GrpcClientImpl;
+using ::openbot::bridge::grpc::GrpcClient;
 
 int main(int argc, char* argv[])
 {
@@ -67,29 +73,39 @@ int main(int argc, char* argv[])
     }
 
 
-    std::unique_ptr<GrpcClientImpl> grpc_client (new GrpcClientImpl(channel));
-    grpc_client->InitFlag();
+    //std::unique_ptr<GrpcClientImpl> grpc_client (new GrpcClientImpl(channel));
+    //grpc_client->InitFlag();
     
     //for testing....
-    
+    /* 
     for (int i = 0; i < 100; i++) {
         std::shared_ptr<::openbot_bridge::sensor_msgs::Image> msg(new ::openbot_bridge::sensor_msgs::Image());
         msg->set_height(100);
         msg->set_width(100);
         LOG(INFO) << "set msg: height>>" << msg->height();
 	grpc_client->SendMsgToGrpc(msg);
+    }*/
+    //grpc_client->StartListen();
+    auto stub = ::openbot_bridge::service_msgs::SensorService::NewStub(channel);
+    GrpcClient<::openbot_bridge::service_msgs::SensorService::Stub, ::openbot_bridge::sensor_msgs::Image, ::google::protobuf::Empty> sensor_service_client(stub);
+    sensor_service_client.registerMethod(
+		    "PublishImageSennorMessages", 
+		    [](::openbot_bridge::service_msgs::SensorService::Stub* stub, 
+                    ::grpc::ClientContext* context, 
+                    const ::openbot_bridge::sensor_msgs::Image& request,
+                    ::google::protobuf::Empty* response) 
+		    {
+                        return stub->PublishImageSennorMessages(context, request, response);
+                    }
+    );
+
+    ::openbot_bridge::sensor_msgs::Image request;
+    request.set_height(100);
+    ::google::protobuf::Empty empty;
+    if (sensor_service_client.CallMethod("PublishImageSennorMessages", request, &empty)) {
+        std::cout << "Response from Service: " << std::endl;
     }
-    LOG(INFO) << "======================start listener====================";
-
-    auto send_msg_fn = std::mem_fn(&openbot::bridge::grpc::GrpcClientImpl::SendMsgToGrpc);
     
-    // create grpc_client node
-    auto grpc_client_node = apollo::cyber::CreateNode("grpc_client");
-
-    // create listener
-    auto listener = grpc_client_node->CreateReader<::openbot_bridge::sensor_msgs::Image>("/openbot/sensor/camera/test/image",
-			  std::bind(send_msg_fn, grpc_client.get(), std::placeholders::_1));
-
     apollo::cyber::WaitForShutdown();
     return EXIT_SUCCESS;
 }
